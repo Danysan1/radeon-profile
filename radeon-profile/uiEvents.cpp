@@ -105,13 +105,22 @@ void radeon_profile::changeEvent(QEvent *event)
 
 void radeon_profile::gpuChanged()
 {
-    figureOutGPUDataPaths(ui->combo_gpus->currentText()); // resolve paths for newly selected card
+    switch (cardDriver) {
+    case XORG: {
+        figureOutGPUDataPaths(ui->combo_gpus->currentText()); // resolve paths for newly selected card
 
-    // do initial stuff once again for new card
-    testSensor();
-    getModuleInfo();
-    getPowerMethod();
-    getCardConnectors();
+        // do initial stuff once again for new card
+        testSensor();
+        getModuleInfo();
+        getPowerMethod();
+        getCardConnectors();
+        break;
+    }
+    case FGLRX: {
+        timerEvent();
+        break;
+    }
+    }
 }
 
 void radeon_profile::iconActivated(QSystemTrayIcon::ActivationReason reason) {
@@ -172,9 +181,20 @@ void radeon_profile::on_cb_gpuData_clicked(bool checked)
 }
 
 void radeon_profile::refreshBtnClicked() {
-    getGLXInfo();
-    getCardConnectors();
-    getModuleInfo();
+    switch (cardDriver) {
+    case XORG: {
+        getGLXInfo();
+        getCardConnectors();
+        getModuleInfo();
+        break;
+    }
+    case FGLRX: {
+        fglrxGetGLXInfo();
+        break;
+    }
+    }
+
+
 }
 
 void radeon_profile::on_graphColorsList_itemDoubleClicked(QTreeWidgetItem *item, int column)

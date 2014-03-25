@@ -18,7 +18,7 @@
 
 extern int ticksCounter, statsTickCounter;
 extern QString powerMethodFilePath, profilePath, dpmStateFilePath, clocksPath, forcePowerLevelFilePath, sysfsHwmonPath, moduleParamsPath;
-extern char selectedPowerMethod, selectedTempSensor, sensorsGPUtempIndex;
+extern char selectedPowerMethod, selectedTempSensor, sensorsGPUtempIndex, cardDriver;
 extern double maxT, minT, rangeX, current, tempSum;
 extern QTimer timer;
 
@@ -42,6 +42,11 @@ class radeon_profile : public QMainWindow
         PM_UNKNOWN = 2
     };
 
+    enum  driver {
+        XORG,
+        FGLRX
+    };
+
     enum tempSensor {
         SYSFS_HWMON = 0, // try to read temp from /sys/class/hwmonX/device/tempX_input
         CARD_HWMON, // try to read temp from /sys/class/drm/cardX/device/hwmon/hwmonX/temp1_input
@@ -63,6 +68,10 @@ class radeon_profile : public QMainWindow
         CORE_VOLTS_LINE,
         MEM_VOLTS_LINE
     };
+
+    struct {
+        int coreClk, memClk, coreVolts, memVolts;
+    } gpuData;
 
 public:
     explicit radeon_profile(QWidget *parent = 0);
@@ -137,6 +146,10 @@ private:
     void doTheStats(const short &currentPowerLevel, const double &coreClock,const double &memClock,const double &voltsGPU, const double &voltsMem);
     void updateStatsTable();
     void setupContextMenus();
+
+    void fglrxGetClocks();
+    void fglrxGetGLXInfo();
+
 };
 
 

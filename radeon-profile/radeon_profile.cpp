@@ -24,11 +24,11 @@
 #include <QSettings>
 #include <QDir>
 
-const int appVersion = 20140215;
+const int appVersion = 20140325;
 
 int ticksCounter = 0, statsTickCounter = 1;
 double maxT = 0.0, minT = 0.0, current, tempSum = 0, rangeX = 180;
-char selectedPowerMethod, selectedTempSensor, sensorsGPUtempIndex;
+char selectedPowerMethod, selectedTempSensor, sensorsGPUtempIndex, cardDriver;
 QString
     powerMethodFilePath, profilePath, dpmStateFilePath, clocksPath, forcePowerLevelFilePath, sysfsHwmonPath, moduleParamsPath,
     err = "Err",
@@ -45,7 +45,6 @@ radeon_profile::radeon_profile(QWidget *parent) :
     timer = new QTimer();
 
     detectCards();
-    figureOutGPUDataPaths(ui->combo_gpus->currentText());
 
     // setup ui elemensts
     ui->mainTabs->setCurrentIndex(0);
@@ -57,13 +56,62 @@ radeon_profile::radeon_profile(QWidget *parent) :
     setupTrayIcon();
 
     loadConfig();
+//cardDriver = FGLRX;
+    switch (cardDriver) {
+    case XORG: {
+        figureOutGPUDataPaths(ui->combo_gpus->currentText());
 
-    // first get some info about system
-    getGLXInfo();
-    testSensor();
-    getModuleInfo();
-    getPowerMethod();
-    getCardConnectors();
+        // first get some info about system
+        getGLXInfo();
+        testSensor();
+        getModuleInfo();
+        getPowerMethod();
+        getCardConnectors();
+
+        // dpm or profile tab enable
+        switch (selectedPowerMethod) {
+        case DPM: {
+            changeProfile->setEnabled(false);
+            ui->tabs_pm->setCurrentIndex(1);
+            ui->tabs_pm->setTabEnabled(0,false);
+            break;
+        }
+        case PROFILE: {
+            dpmMenu->setEnabled(false);
+            ui->tabs_pm->setCurrentIndex(0);
+            ui->tabs_pm->setTabEnabled(1,false);
+            break;
+        }
+        case PM_UNKNOWN: {
+            dpmMenu->setEnabled(false);
+            changeProfile->setEnabled(false);
+            break;
+        }
+        }
+        break;
+    }
+    case FGLRX: {
+        getModuleInfo();
+        getCardConnectors();
+        fglrxGetGLXInfo();
+
+        ui->tabs_pm->setEnabled(false);
+
+       QStringList out = grabSystemInfo("aticonfig --lsa").filter("Radeon");
+//        QFile f("/mnt/stuff/catalyst/lsa");
+
+//        f.open(QIODevice::ReadOnly);
+//        QStringList out = QString(f.readAll()).split('\n').filter("Radeon");
+//        f.close();
+
+
+        for (int i = 0; i< out.count(); i++)
+            ui->combo_gpus->addItem(out[i].trimmed());
+
+        dpmMenu->setEnabled(false);
+        break;
+    }
+    }
 
     // fix for warrning: QMetaObject::connectSlotsByName: No matching signal for...
     connect(ui->combo_gpus,SIGNAL(currentIndexChanged(QString)),this,SLOT(gpuChanged()));
@@ -72,27 +120,6 @@ radeon_profile::radeon_profile(QWidget *parent) :
     connect(timer,SIGNAL(timeout()),this,SLOT(timerEvent()));
     connect(ui->timeSlider,SIGNAL(valueChanged(int)),this,SLOT(changeTimeRange()));
     timer->setInterval(ui->spin_timerInterval->value()*1000);
-
-    // dpm or profile tab enable
-    switch (selectedPowerMethod) {
-    case DPM: {
-        changeProfile->setEnabled(false);
-        ui->tabs_pm->setCurrentIndex(1);
-        ui->tabs_pm->setTabEnabled(0,false);
-        break;
-    }
-    case PROFILE: {
-        dpmMenu->setEnabled(false);
-        ui->tabs_pm->setCurrentIndex(0);
-        ui->tabs_pm->setTabEnabled(1,false);
-        break;
-    }
-    case PM_UNKNOWN: {
-        dpmMenu->setEnabled(false);
-        changeProfile->setEnabled(false);
-        break;
-    }
-    }
 
     timerEvent();
     timer->start();
@@ -106,7 +133,7 @@ radeon_profile::radeon_profile(QWidget *parent) :
     connect(refreshBtn,SIGNAL(clicked()),this,SLOT(refreshBtnClicked()));
 
     // version label
-    QLabel *l = new QLabel("v. " +QString().setNum(appVersion),this);
+    QLabel *l = new QLabel("v. " +QString().setNum(appVersion) + "a (fglrx)",this);
     QFont f;
     f.setStretch(QFont::Unstretched);
     f.setWeight(QFont::Bold);
@@ -127,48 +154,127 @@ void radeon_profile::timerEvent() {
     if (!refreshWhenHidden->isChecked() && this->isHidden())
         return;
 
-    if (ui->cb_gpuData->isChecked()) {
-        switch (selectedPowerMethod) {
-        case DPM:
-        case PROFILE: {
-            ui->l_profile->setText(getCurrentPowerProfile());
-            break;
+    switch (cardDriver) {
+    case XORG: {
+        if (ui->cb_gpuData->isChecked()) {
+            switch (selectedPowerMethod) {
+            case DPM:
+            case PROFILE: {
+                ui->l_profile->setText(getCurrentPowerProfile());
+                break;
+            }
+            case PM_UNKNOWN: {
+                ui->tabs_pm->setEnabled(false);
+                ui->list_currentGPUData->addItem("Can't read data. Card not detected.");
+                return;
+                break;
+            }
+            }
+
+            ui->list_currentGPUData->addItems(fillGpuDataTable());
+
         }
-        case PM_UNKNOWN: {
-            ui->tabs_pm->setEnabled(false);
-            ui->list_currentGPUData->addItem("Can't read data. Card not detected.");
-            return;
-            break;
-        }
-        }
-
-        ui->list_currentGPUData->addItems(fillGpuDataTable());
-
-        // count ticks for stats
-        statsTickCounter++;
-
-        if (ui->cb_graphs->isChecked()) {
-            // count ticks to move graph to right
-            ticksCounter++;
-            ui->plotTemp->xAxis->setRange(ticksCounter+20, rangeX,Qt::AlignRight);
-            ui->plotTemp->replot();
-
-            ui->plotColcks->xAxis->setRange(ticksCounter+20,rangeX,Qt::AlignRight);
-            ui->plotColcks->replot();
-
-            ui->plotVolts->xAxis->setRange(ticksCounter+20,rangeX,Qt::AlignRight);
-            ui->plotVolts->replot();
-        }
-        refreshTooltip();
+        if (ui->cb_glxInfo->isChecked())
+            getGLXInfo();
+        if (ui->cb_connectors->isChecked())
+            getCardConnectors();
+        if (ui->cb_modParams->isChecked())
+            getModuleInfo();
+        break;
     }
-    if (ui->cb_glxInfo->isChecked())
-        getGLXInfo();
-    if (ui->cb_connectors->isChecked())
-        getCardConnectors();
-    if (ui->cb_modParams->isChecked())
-        getModuleInfo();
+    case FGLRX: {
+        if (ui->cb_gpuData->isChecked()) {
+            ui->list_currentGPUData->clear();
+            fglrxGetClocks();
+            ui->list_currentGPUData->addItem("Current GPU clock: " + QString().setNum(gpuData.coreClk) + "MHz");
+            ui->list_currentGPUData->addItem("Current mem clock: " + QString().setNum(gpuData.memClk) + "MHz");
+
+            int r = (gpuData.memClk >= gpuData.coreClk) ? gpuData.memClk : gpuData.coreClk;
+            if (r > ui->plotColcks->yAxis->range().upper)
+                ui->plotColcks->yAxis->setRangeUpper(r + 150);
+
+            // add data to plots
+            ui->plotColcks->graph(0)->addData(ticksCounter,gpuData.coreClk);
+            ui->plotColcks->graph(1)->addData(ticksCounter,gpuData.memClk);
+
+            ui->list_currentGPUData->addItem("----------------");
+            ui->list_currentGPUData->addItem(getGPUTemp());
+
+        }
+
+        if (ui->cb_glxInfo->isChecked())
+            fglrxGetGLXInfo();
+        if (ui->cb_connectors->isChecked())
+            getCardConnectors();
+        if (ui->cb_modParams->isChecked())
+            getModuleInfo();
+        if (ui->cb_stats->isChecked()) {
+            doTheStats(0,gpuData.coreClk,gpuData.memClk,0,0);
+
+            // do the math only when user looking at stats table
+            if (ui->tabs_systemInfo->currentIndex() == 3)
+                updateStatsTable();
+        }
+        break;
+    }
+    }
+
+    // count ticks for stats
+    statsTickCounter++;
+
+    if (ui->cb_graphs->isChecked()) {
+        // count ticks to move graph to right
+        ticksCounter++;
+        ui->plotTemp->xAxis->setRange(ticksCounter+20, rangeX,Qt::AlignRight);
+        ui->plotTemp->replot();
+
+        ui->plotColcks->xAxis->setRange(ticksCounter+20,rangeX,Qt::AlignRight);
+        ui->plotColcks->replot();
+
+        ui->plotVolts->xAxis->setRange(ticksCounter+20,rangeX,Qt::AlignRight);
+        ui->plotVolts->replot();
+    }
+    refreshTooltip();
+
 }
 //========
+
+void radeon_profile::fglrxGetClocks() {
+
+    QStringList out = grabSystemInfo("aticonfig --odgc  --adapter=" + QString().setNum(ui->combo_gpus->currentIndex()));
+//    QFile f("/mnt/stuff/catalyst/odgc");
+
+//    f.open(QIODevice::ReadOnly);
+//    QStringList out = QString(f.readAll()).split('\n');
+//    f.close();
+
+    out = out.filter("Clocks");
+
+    QRegExp rx;
+    rx.setPattern("\\s+\\d+\\s+\\d+");
+    rx.indexIn(out[0]);
+
+
+    QStringList gData = rx.cap(0).trimmed().split("           ");
+    gpuData.coreClk = gData[0].toInt();
+    gpuData.memClk = gData[1].toInt();
+    gpuData.coreVolts = 0;
+    gpuData.memVolts = 0;
+}
+
+void radeon_profile::fglrxGetGLXInfo() {
+    ui->list_glxinfo->clear();
+    QStringList data, gpus = grabSystemInfo("lspci").filter("Radeon",Qt::CaseInsensitive);
+    gpus.removeAt(gpus.indexOf(QRegExp(".+Audio.+"))); //remove radeon audio device
+
+    // loop for multi gpu
+    for (int i = 0; i < gpus.count(); i++)
+        data << "VGA:"+gpus[i].split(":",QString::SkipEmptyParts)[2];
+
+    QStringList out = grabSystemInfo("fglrxinfo");
+    data << out.filter(QRegExp("\\.+"));
+    ui->list_glxinfo->addItems(data);
+}
 
 // === Run commands to read sysinfo
 QStringList radeon_profile::grabSystemInfo(const QString cmd) {
@@ -387,13 +493,18 @@ void radeon_profile::getCardConnectors() {
 
 void radeon_profile::detectCards() {
     QStringList out = grabSystemInfo("ls /sys/class/drm/").filter("card");
-    for (char i = 0; i < out.count(); i++) {
-        QFile f("/sys/class/drm/"+out[i]+"/device/uevent");
-        if (f.open(QIODevice::ReadOnly)) {
-            if (f.readLine(50).contains("DRIVER=radeon"))
-                ui->combo_gpus->addItem(f.fileName().split('/')[4]);
+    if (!out.isEmpty()) {
+        for (char i = 0; i < out.count(); i++) {
+            QFile f("/sys/class/drm/"+out[i]+"/device/uevent");
+            if (f.open(QIODevice::ReadOnly)) {
+                if (f.readLine(50).contains("DRIVER=radeon"))
+                    ui->combo_gpus->addItem(f.fileName().split('/')[4]);
+            }
         }
-    }
+        cardDriver = XORG;
+    } else
+        cardDriver = FGLRX;
+
 }
 
 void radeon_profile::figureOutGPUDataPaths(const QString gpuName) {
@@ -636,50 +747,72 @@ QString radeon_profile::getCurrentPowerProfile() {
 QString radeon_profile::getGPUTemp() {
     QString temp;
 
-    switch (selectedTempSensor) {
-    case SYSFS_HWMON:
-    case CARD_HWMON: {
-        QFile hwmon(sysfsHwmonPath);
-        hwmon.open(QIODevice::ReadOnly);
-        temp = hwmon.readLine(20);
-        hwmon.close();
-        current = temp.toDouble() / 1000;
+    switch (cardDriver) {
+    case XORG: {
+
+        switch (selectedTempSensor) {
+        case SYSFS_HWMON:
+        case CARD_HWMON: {
+            QFile hwmon(sysfsHwmonPath);
+            hwmon.open(QIODevice::ReadOnly);
+            temp = hwmon.readLine(20);
+            hwmon.close();
+            current = temp.toDouble() / 1000;
+            break;
+        }
+        case PCI_SENSOR: {
+            QStringList out = grabSystemInfo("sensors");
+            temp = out[sensorsGPUtempIndex+2].split(" ",QString::SkipEmptyParts)[1].remove("+").remove("C").remove("°");
+            current = temp.toDouble();
+            break;
+        }
+        case MB_SENSOR: {
+            QStringList out = grabSystemInfo("sensors");
+            temp = out[sensorsGPUtempIndex].split(" ",QString::SkipEmptyParts)[1].remove("+").remove("C").remove("°");
+            current = temp.toDouble();
+            break;
+        }
+        case TS_UNKNOWN: {
+            ui->plotTemp->setVisible(false),ui->cb_showTempsGraph->setEnabled(false),
+                    ui->cb_showTempsGraph->setChecked(false),ui->l_minMaxTemp->setVisible(false);
+            return "";
+            break;
+        }
+        }
         break;
     }
-    case PCI_SENSOR: {
-        QStringList out = grabSystemInfo("sensors");
-        temp = out[sensorsGPUtempIndex+2].split(" ",QString::SkipEmptyParts)[1].remove("+").remove("C").remove("°");
-        current = temp.toDouble();
+    case FGLRX: {
+         QStringList out = grabSystemInfo("aticonfig --odgt --adapter=" + QString().setNum(ui->combo_gpus->currentIndex()));
+//        QFile f("/mnt/stuff/catalyst/odgt");
+
+//        f.open(QIODevice::ReadOnly);
+//        QStringList out = QString(f.readAll()).split('\n');
+//        f.close();
+
+        out = out.filter("Sensor");
+
+        QRegExp rx;
+        rx.setPattern("\\d+\\.\\d+");
+        rx.indexIn(out[0]);
+        current = rx.cap(0).toFloat();
         break;
     }
-    case MB_SENSOR: {
-        QStringList out = grabSystemInfo("sensors");
-        temp = out[sensorsGPUtempIndex].split(" ",QString::SkipEmptyParts)[1].remove("+").remove("C").remove("°");
-        current = temp.toDouble();
-        break;
-    }
-    case TS_UNKNOWN: {
-        ui->plotTemp->setVisible(false),ui->cb_showTempsGraph->setEnabled(false),
-                ui->cb_showTempsGraph->setChecked(false),ui->l_minMaxTemp->setVisible(false);
-        return "";
-        break;
-    }
     }
 
-    tempSum += current;
+        tempSum += current;
 
-    if (minT == 0)
-        minT = current;
-    maxT = (current >= maxT) ? current : maxT;
-    minT = (current <= minT) ? current : minT;
+        if (minT == 0)
+            minT = current;
+        maxT = (current >= maxT) ? current : maxT;
+        minT = (current <= minT) ? current : minT;
 
-    if (maxT >= ui->plotTemp->yAxis->range().upper || minT <= ui->plotTemp->yAxis->range().lower)
-        ui->plotTemp->yAxis->setRange(minT - 5, maxT + 5);
+        if (maxT >= ui->plotTemp->yAxis->range().upper || minT <= ui->plotTemp->yAxis->range().lower)
+            ui->plotTemp->yAxis->setRange(minT - 5, maxT + 5);
 
-    ui->plotTemp->graph(0)->addData(ticksCounter,current);
-    ui->l_minMaxTemp->setText("Now: " + QString().setNum(current) + "C | Max: " + QString().setNum(maxT) + "C | Min: " + QString().setNum(minT) + "C | Avg: " + QString().setNum(tempSum/ticksCounter,'f',1));
+        ui->plotTemp->graph(0)->addData(ticksCounter,current);
+        ui->l_minMaxTemp->setText("Now: " + QString().setNum(current) + "C | Max: " + QString().setNum(maxT) + "C | Min: " + QString().setNum(minT) + "C | Avg: " + QString().setNum(tempSum/ticksCounter,'f',1));
 
-    return "Current GPU temp: "+QString().setNum(current) + QString::fromUtf8("\u00B0C");
+        return "Current GPU temp: "+QString().setNum(current) + QString::fromUtf8("\u00B0C");
 }
 //========
 
