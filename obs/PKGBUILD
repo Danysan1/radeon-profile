@@ -1,0 +1,40 @@
+# Maintainer: marazmista <marazmista@gmail.com>
+
+pkgname=radeon-profile
+pkgver=1
+pkgrel=$(uname --machine)
+pkgdesc="App for display info about radeon card"
+url="http://github.com/marazmista/radeon-profile"
+arch=('i686' 'x86_64')
+license=('GPL2')
+makedepends=('git' 'qt5-base' 'qtchooser' 'make' 'libxrandr')
+depends=('qt5-base' 'libxrandr')
+optdepends=('radeon-profile-daemon: system daemon for reading card info'
+	'lm_sensors: to show gpu temperature' 
+	'sudo: start with root privilages without password' 
+	'mesa-demos: for glxinfo' 
+	'xorg-xdriinfo: display driver name' 
+	'xorg-xrandr: show card connected outputs'
+	'xf86-video-ati: radeon open source driver')
+provides=('radeon-profile')
+replaces=('radeon-profile')
+conflicts=('radeon-profile')
+source=(radeon-profile-${pkgver}.tar.gz)
+sha256sums=('SKIP')
+ 
+build() {
+	mkdir -p build
+	cd build
+	qmake ../radeon-profile-$pkgver/radeon-profile/
+	make
+}
+ 
+package() {
+	cd build/
+	make prefix="${pkgdir}" install
+	install -Dm755 "$srcdir/build/radeon-profile" "$pkgdir/usr/bin/radeon-profile"
+
+    	cd $srcdir/radeon-profile-$pkgver/radeon-profile/extra/
+	install -Dm644 "radeon-profile.png" "$pkgdir/usr/share/pixmaps/radeon-profile.png"
+	install -Dm644 "radeon-profile.desktop" "$pkgdir/usr/share/applications/radeon-profile.desktop"
+}

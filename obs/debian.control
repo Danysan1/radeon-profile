@@ -1,0 +1,15 @@
+Source: radeon-profile
+Maintainer: marazmista <marazmista@gmail.com>
+Uploaders: danysan <danysan95@gmail.com>
+Section: utils
+Priority: optional
+Build-Depends: debhelper, qtbase5-dev, qt5-default, make, libxrandr-dev
+Homepage: https://github.com/marazmista/radeon-profile
+Vcs-git: https://github.com/marazmista/radeon-profile.git
+
+Package: radeon-profile
+Architecture: any
+Depends: qt5-default, libxrandr2, ${misc:Depends}, ${shlibs:Depends}
+Recommends: radeon-profile-daemon, xserver-xorg-video-ati
+Suggests: lm-sensors, driconf, sudo
+Description: Application to read current clocks of ATi Radeon cards (xf86-video-ati and fglrx)

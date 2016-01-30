@@ -1,0 +1,28 @@
+<services>
+  	<!-- Service file that links the OBS package to the git repo --> 
+  	<!-- The git copy of this file is ignored by the Open Build Service.
+  	 Hence, whenever this file is edited it must be copied to the OBS in order to work -->
+  
+	<!-- https://en.opensuse.org/openSUSE:Build_Service_private_instance_software_live_cycle#Step_by_step -->
+	<service name="tar_scm">
+		<param name="scm">git</param>
+		<!-- <param name="url">https://github.com/marazmista/radeon-profile.git</param> OBS is still not supported
+		<param name="versionformat">@PARENT_TAG@.@TAG_OFFSET@</param> -->
+      <param name="url">https://github.com/Danysan1/radeon-profile.git</param>
+		<param name="versionformat">%ci</param>
+	</service>
+
+	<!-- Extract build scripts -->
+	<service name="extract_file">
+    		<param name="archive">*.tar</param>
+    		<param name="files">*/obs/debian.changelog  */obs/debian.control  */obs/debian.copyright  */obs/debian.rules  */obs/PKGBUILD  */obs/radeon-profile.dsc  */obs/radeon-profile.spec</param>
+	</service>
+
+	<!-- Debian packaging system wants a .tar.gz source file ¯\_(ツ)_/¯ -->
+	<service name="recompress">
+		<param name="compression">gz</param>
+		<param name="file">*.tar</param>
+	</service>
+	
+  <service name="set_version"/>
+</services>
