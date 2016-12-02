@@ -30,18 +30,10 @@
 #define file_powerProfile "power_profile"
 #define file_powerDpmState "power_dpm_state"
 #define file_powerDpmForcePerformanceLevel "power_dpm_force_performance_level"
-
-#define label_currentPowerLevel "Current power level"
-#define label_currentGPUClock "Current GPU clock"
-#define label_currentMemClock "Current mem clock"
-#define label_uvdVideoCoreClock "Current mem clock"
-#define label_uvdDecoderClock "UVD decoder clock (dclk)"
-#define label_vddc "Voltage (vddc)"
-#define label_vddci "Voltage (vddci)"
-#define label_currentGPUTemperature "Current GPU temp"
-#define label_errorReadingData "Can't read data. (debugfs mounted? daemon is running? root rights?)"
+#define file_overclockLevel "pp_sclk_od"
 
 #define logDateFormat "yyyy-MM-dd_hh-mm-ss"
+
 
 
 class globalStuff {
@@ -96,13 +88,13 @@ public:
         gpuClocksStruct() { }
 
         gpuClocksStruct(int _coreClk, int _memClk, int _coreVolt, int _memVolt, int _uvdCClk, int _uvdDclk, char _pwrLevel ) {
-            coreClk = _coreClk,
-                    memClk = _memClk,
-                    coreVolt = _coreVolt,
-                    memVolt = _memVolt,
-                    uvdCClk = _uvdCClk,
-                    uvdDClk = _uvdDclk,
-                    powerLevel = _pwrLevel;
+            coreClk = _coreClk;
+            memClk = _memClk;
+            coreVolt = _coreVolt;
+            memVolt = _memVolt;
+            uvdCClk = _uvdCClk;
+            uvdDClk = _uvdDclk;
+            powerLevel = _pwrLevel;
         }
 
         // initialize empty struct, so when we pass -1, only values that != -1 will show
@@ -119,12 +111,26 @@ public:
     // structure which holds what can be display on ui and on its base
     // we enable ui elements
     struct driverFeatures {
-        bool canChangeProfile, coreClockAvailable, memClockAvailable, coreVoltAvailable, memVoltAvailable, temperatureAvailable, pwmAvailable;
+        bool canChangeProfile,
+            coreClockAvailable,
+            memClockAvailable,
+            coreVoltAvailable,
+            memVoltAvailable,
+            temperatureAvailable,
+            pwmAvailable,
+            overClockAvailable;
         globalStuff::powerMethod pm;
         int pwmMaxSpeed;
 
         driverFeatures() {
-            canChangeProfile = coreClockAvailable = memClockAvailable = coreVoltAvailable = memVoltAvailable = temperatureAvailable= pwmAvailable = false;
+            canChangeProfile =
+                    coreClockAvailable =
+                    memClockAvailable =
+                    coreVoltAvailable =
+                    memVoltAvailable =
+                    temperatureAvailable =
+                    pwmAvailable =
+                    overClockAvailable = false;
             pm = PM_UNKNOWN;
             pwmMaxSpeed = 0;
         }

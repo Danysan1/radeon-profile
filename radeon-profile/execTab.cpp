@@ -56,12 +56,12 @@ void radeon_profile::on_btn_modifyExecProfile_clicked()
 void radeon_profile::on_btn_ok_clicked()
 {
     if (ui->txt_profileName->text().isEmpty()) {
-        QMessageBox::critical(this,"Error","Profile name can't be empty!",QMessageBox::Ok);
+        QMessageBox::critical(this, tr("Error"), tr("Profile name can't be empty!"), QMessageBox::Ok);
         return;
     }
 
     if (ui->txt_binary->text().isEmpty()) {
-        QMessageBox::critical(this,"Error","No binary is selected!",QMessageBox::Ok);
+        QMessageBox::critical(this, tr("Error"), tr("No binary is selected!"), QMessageBox::Ok);
         return;
     }
 
@@ -71,7 +71,7 @@ void radeon_profile::on_btn_ok_clicked()
         if (QFile::exists(tmpS))
             ui->txt_binary->setText(tmpS);
         else {
-            QMessageBox::critical(this,"Error","Binary \""+ui->txt_binary->text()+"\" not found in /usr/bin.");
+            QMessageBox::critical(this, tr("Error"), tr("Binary not found in /usr/bin: ") + ui->txt_binary->text());
             return;
         }
     }
@@ -128,7 +128,7 @@ void radeon_profile::on_list_variables_itemClicked(QListWidgetItem *item)
     // if value for this variable is 'user_input' display a window for input
     if (values[0] == "user_input") {
         bool ok;
-        QString input = QInputDialog::getText(this,"Enter value","Enter valid value for " + ui->list_variables->currentItem()->text(),QLineEdit::Normal,"",&ok);
+        QString input = QInputDialog::getText(this, tr("Enter value"), tr("Enter valid value for ") + ui->list_variables->currentItem()->text(), QLineEdit::Normal,"",&ok);
 
         // look for this variable in list
         int varIndex = selectedVariableVaules.indexOf(QRegExp(ui->list_variables->currentItem()->text()+".+",Qt::CaseInsensitive),0);
@@ -142,8 +142,8 @@ void radeon_profile::on_list_variables_itemClicked(QListWidgetItem *item)
                 selectedVariableVaules[varIndex] = ui->list_variables->currentItem()->text()+"=\""+input+"\"";
         } else {
             // hehe, looks weird but check ok status is for, when input was empty, and whether user click ok or cancel, dispaly quesion
-            if (varIndex != -1 && !ok || ok) {
-                if (QMessageBox::question(this,"Question","Remove existing variable in summary?",QMessageBox::Yes | QMessageBox::No,QMessageBox::Yes) == QMessageBox::Yes)
+            if ((varIndex != -1) || ok) {
+                if (QMessageBox::question(this, tr("Question"), tr("Remove this item?"), QMessageBox::Yes | QMessageBox::No,QMessageBox::Yes) == QMessageBox::Yes)
                     selectedVariableVaules.removeAt(varIndex);
             }
         }
@@ -179,6 +179,7 @@ void radeon_profile::on_list_variables_itemClicked(QListWidgetItem *item)
 
 void radeon_profile::on_list_vaules_itemClicked(QListWidgetItem *item)
 {
+    Q_UNUSED(item)
     ui->txt_summary->clear();
     QStringList selectedValues;
 
@@ -203,7 +204,7 @@ void radeon_profile::on_btn_removeExecProfile_clicked()
     if (ui->list_execProfiles->selectedItems().count() == 0)
         return;
 
-   if (QMessageBox::question(this,"Remove", "Remove this item?",QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::Yes)
+   if (QMessageBox::question(this, tr("Remove"), tr("Remove this item?"), QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::Yes)
         delete ui->list_execProfiles->selectedItems()[0];
    else
        return;
@@ -211,7 +212,7 @@ void radeon_profile::on_btn_removeExecProfile_clicked()
 
 void radeon_profile::on_btn_selectBinary_clicked()
 {
-    QString binaryPath = QFileDialog::getOpenFileName(this,"Select binary");
+    QString binaryPath = QFileDialog::getOpenFileName(this, tr("Select binary"));
 
     if (!binaryPath.isEmpty())
         ui->txt_binary->setText(binaryPath);
@@ -219,7 +220,7 @@ void radeon_profile::on_btn_selectBinary_clicked()
 
 void radeon_profile::on_btn_selectLog_clicked()
 {
-    QString logFile = QFileDialog::getSaveFileName(this, "Select log file",QDir::homePath()+"/"+ui->txt_profileName->text());
+    QString logFile = QFileDialog::getSaveFileName(this, tr("Select log file"), QDir::homePath()+"/"+ui->txt_profileName->text());
 
     if (!logFile.isEmpty())
         ui->txt_logFile->setText(logFile);
@@ -285,7 +286,7 @@ void radeon_profile::on_btn_runExecProfile_clicked()
         ui->tabs_execOutputs->setCurrentIndex(ui->tabs_execOutputs->count() - 1);
     }
     else {
-        QMessageBox::critical(this,"Error","Can't run something that not exists!");
+        QMessageBox::critical(this, tr("Error"), tr("Can't run something that not exists!"));
         delete exe;
     }
 }
@@ -310,10 +311,11 @@ void radeon_profile::btnBackToProfilesClicked()
 }
 
 void radeon_profile::on_list_execProfiles_itemDoubleClicked(QTreeWidgetItem *item, int column) {
+    Q_UNUSED(column)
         switch (ui->cb_execDbcAction->currentIndex()) {
         default:
         case 0:
-            if (QMessageBox::question(this,"Run","Run: \""+item->text(0)+"\"?",QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::Yes)
+            if (QMessageBox::question(this, tr("Run"), tr("Run: \"") + item->text(0) + "?", QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::Yes)
                 ui->btn_runExecProfile->click();
             break;
         case 1:

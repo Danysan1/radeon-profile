@@ -2,9 +2,10 @@
 // copyright marazmista @ 12.05.2014
 
 #include "daemonComm.h"
+#include <QDebug>
 
 daemonComm::daemonComm() {
-    signalSender = new QLocalSocket();
+    signalSender = new QLocalSocket(this);
     connect(signalSender,SIGNAL(connected()),this,SLOT(onConnect()));
 }
 

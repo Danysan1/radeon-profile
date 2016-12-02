@@ -21,17 +21,13 @@
 #define startVoltsScaleL 500
 #define startVoltsScaleH 650
 
-extern int ticksCounter, statsTickCounter;
-extern QString powerMethodFilePath, profilePath, dpmStateFilePath, clocksPath, forcePowerLevelFilePath, sysfsHwmonPath, moduleParamsPath;
-extern char selectedPowerMethod, selectedTempSensor, sensorsGPUtempIndex;
-extern double maxT, minT, rangeX, current, tempSum;
-extern QTimer timer;
+#define minFanStepsTemp 0
+#define maxFanStepsTemp 99
 
-struct pmLevel {
-    QString name;
-    float time;
-};
-extern QList<pmLevel> pmStats;
+#define minFanStepsSpeed 10
+#define maxFanStepsSpeed 100
+
+#define appVersion 20161123
 
 namespace Ui {
 class radeon_profile;
@@ -64,14 +60,8 @@ class radeon_profile : public QMainWindow
         LOG_FILE_DATE_APPEND
     };
 
-    struct fanStepPair {
-        int temperature, speed;
+    typedef QMap<int, unsigned int> fanProfileSteps;
 
-        fanStepPair(int _temperature, int _speed) {
-            temperature = _temperature;
-            speed = _speed;
-        }
-    };
 
 public:
     explicit radeon_profile(QStringList, QWidget *parent = 0);
@@ -80,7 +70,7 @@ public:
 
     QSystemTrayIcon *trayIcon;
     QAction *closeApp, *dpmSetBattery, *dpmSetBalanced, *dpmSetPerformance,*changeProfile, *refreshWhenHidden;
-    QMenu *dpmMenu, *trayMenu, *optionsMenu, *forcePowerMenu;
+    QMenu *dpmMenu, *trayMenu, *optionsMenu, *forcePowerMenu, *fanProfilesMenu;
     QTimer *timer;
 
 private slots:
@@ -145,12 +135,27 @@ private slots:
     void on_btn_removeFanStep_clicked();
     void on_list_fanSteps_itemDoubleClicked(QTreeWidgetItem *item, int column);
     void on_fanSpeedSlider_valueChanged(int value);
+    void on_cb_enableOverclock_toggled(bool enable);
+    void on_btn_applyOverclock_clicked();
+    void on_slider_overclock_valueChanged(int value);
+    void on_combo_fanProfiles_currentTextChanged(const QString &arg1);
+    void on_btn_activateFanProfile_clicked();
+    void on_btn_removeFanProfile_clicked();
+    void on_btn_saveFanProfile_clicked();
+    void on_btn_saveAsFanProfile_clicked();
+    void fanProfileMenuActionClicked(QAction *a);
+    void on_btn_export_clicked();
 
 private:
     gpu device;
     static const QString settingsPath;
     QList<execBin*> *execsRunning;
-    QList<fanStepPair> fanSteps;
+
+    fanProfileSteps currentFanProfile;
+    QMap<QString, fanProfileSteps> fanProfiles;
+
+    QMap<QString, unsigned int> pmStats;
+    unsigned int rangeX, ticksCounter, statsTickCounter;
 
     Ui::radeon_profile *ui;
     void setupGraphs();
@@ -174,11 +179,47 @@ private:
     void loadFanProfiles();
     void saveFanProfiles();
     int askNumber(const int value, const int min, const int max, const QString label);
-    void makeFanProfileGraph(const QList<fanStepPair> &steps);
+    void makeFanProfileListaAndGraph(const fanProfileSteps &profile);
     void refreshUI();
     void connectSignals();
+    void setCurrentFanProfile(const QString &profileName, const fanProfileSteps &profile);
     void adjustFanSpeed();
+    fanProfileSteps stepsListToMap();
+    void addChild(QTreeWidget * parent, const QString &leftColumn, const QString  &rightColumn);
+    void setupFanProfilesMenu(const bool rebuildMode = false);
+    int findCurrentFanProfileMenuIndex();
+    /**
+     * @brief configureDaemonAutoRefresh Reconfigures the daemon with indicated auto-refresh settings.
+     * @param enabled If true enables auto-refresh, otherwise disables it.
+     * @param interval Seconds between each update.
+     */
+    void configureDaemonAutoRefresh(bool enabled = true, int interval = 1);
 
+    /**
+     * @brief showWindow reveals the main window, unless the "Start Minimized" setting is checked
+     */
+    void showWindow();
+
+    /**
+     * @brief fanStepIsValid Checks if the given parameters are a valid fan step.
+     * @param temperature
+     * @param fanSpeed
+     * @return If the step is valid.
+     */
+    bool fanStepIsValid(int temperature, int fanSpeed);
+
+    /**
+     * @brief addFanStep Adds a single fan step to the custom curve steps.
+     * If another step with the same temperature exists already it is overwritten.
+     * @param temperature
+     * @param fanSpeed
+     */
+    void addFanStep (int temperature, int fanSpeed);
+
+    void fillConnectors();
+    void fillModInfo();
+
+    bool askConfirmation(const QString title, const QString question);
 };
 
 #endif // RADEON_PROFILE_H

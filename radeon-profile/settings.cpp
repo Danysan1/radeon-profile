@@ -8,6 +8,8 @@
 #include <QMenu>
 #include <QDir>
 #include <QTreeWidgetItem>
+#include <QDesktopWidget>
+#include <QRect>
 
 const QString radeon_profile::settingsPath = QDir::homePath() + "/.radeon-profile-settings";
 const QString execProfilesPath = QDir::homePath() + "/.radeon-profile-execProfiles";
@@ -38,6 +40,13 @@ void radeon_profile::saveConfig() {
     settings.setValue("graphRange",ui->timeSlider->value());
     settings.setValue("daemonAutoRefresh",ui->cb_daemonAutoRefresh->isChecked());
     settings.setValue("fanSpeedSlider",ui->fanSpeedSlider->value());
+    settings.setValue("saveSelectedFanMode",ui->cb_saveFanMode->isChecked());
+    settings.setValue("fanMode",ui->fanModesTabs->currentIndex());
+    settings.setValue("fanProfileName",ui->l_currentFanProfile->text());
+
+    settings.setValue("overclockEnabled", ui->cb_enableOverclock->isChecked());
+    settings.setValue("overclockAtLaunch", ui->cb_overclockAtLaunch->isChecked());
+    settings.setValue("overclockValue", ui->slider_overclock->value());
 
     // Graph settings
     settings.setValue("graphLineThickness",ui->spin_lineThick->value());
@@ -93,6 +102,10 @@ void radeon_profile::loadConfig() {
     ui->cb_daemonAutoRefresh->setChecked(settings.value("daemonAutoRefresh",true).toBool());
     ui->cb_execDbcAction->setCurrentIndex(settings.value("execDbcAction",0).toInt());
     ui->fanSpeedSlider->setValue(settings.value("fanSpeedSlider",80).toInt());
+    ui->cb_saveFanMode->setChecked(settings.value("saveSelectedFanMode",false).toBool());
+    ui->l_currentFanProfile->setText(settings.value("fanProfileName","default").toString());
+    if (ui->cb_saveFanMode->isChecked())
+        ui->fanModesTabs->setCurrentIndex(settings.value("fanMode",0).toInt());
 
     optionsMenu->actions().at(0)->setChecked(settings.value("showLegend",true).toBool());
     optionsMenu->actions().at(1)->setChecked(settings.value("graphOffset",true).toBool());
@@ -118,9 +131,21 @@ void radeon_profile::loadConfig() {
     ui->cb_showVoltsGraph->setChecked(settings.value("showVoltsGraphOnStart",false).toBool());
     ui->cb_execSysEnv->setChecked(settings.value("appendSysEnv",true).toBool());
 
+    ui->cb_enableOverclock->setChecked(settings.value("overclockEnabled",false).toBool());
+    ui->cb_overclockAtLaunch->setChecked(settings.value("overclockAtLaunch",false).toBool());
+    ui->slider_overclock->setValue(settings.value("overclockValue",0).toInt());
+
     // apply some settings to ui on start //
     if (ui->cb_saveWindowGeometry->isChecked())
         this->setGeometry(settings.value("windowGeometry").toRect());
+    else {
+        // Set up the size at 1/2 of the screen size, centered
+        const QRect desktopSize = QDesktopWidget().availableGeometry(this);
+        this->setGeometry(desktopSize.width() / 4, // Left offset
+                         desktopSize.height() / 4, // Top offset
+                         desktopSize.width() / 2, // Width
+                         desktopSize.height() / 2); // Height
+    }
 
     ui->cb_graphs->setEnabled(ui->cb_gpuData->isChecked());
     ui->cb_stats->setEnabled(ui->cb_gpuData->isChecked());
@@ -171,53 +196,110 @@ void radeon_profile::loadConfig() {
 
 void radeon_profile::loadFanProfiles() {
     QFile fsPath(fanStepsPath);
+
     if (fsPath.open(QIODevice::ReadOnly)) {
-        QString profile = QString(fsPath.readAll());
+        QStringList profiles = QString(fsPath.readAll()).split('\n',QString::SkipEmptyParts);
 
-        QStringList steps = profile.split("|",QString::SkipEmptyParts);
+        for (QString profileLine : profiles) {
+            QStringList profileData = profileLine.split("|",QString::SkipEmptyParts);
 
-        if (steps.count() > 1) {
-            for (int i = 1; i < steps.count(); ++i) {
-                QStringList pair = steps[i].split("#");
-                ui->list_fanSteps->addTopLevelItem(new QTreeWidgetItem(QStringList() << pair[0] << pair[1]));
+            fanProfileSteps p;
 
-                fanSteps.append(fanStepPair(pair[0].toInt(),pair[1].toInt()));
-
-                ui->plotFanProfile->graph(0)->addData(pair[0].toInt(), pair[1].toInt());
+            for (int i = 1; i < profileData.count(); ++i) {
+                QStringList pair = profileData[i].split("#");
+                p.insert(pair[0].toInt(),pair[1].toInt());
             }
 
-            fsPath.close();
+
+            ui->combo_fanProfiles->addItem(profileData[0]);
+            fanProfiles.insert(profileData[0], p);
         }
+
+        fsPath.close();
     } else {
         //default profile if no file found
-        fanSteps.append(fanStepPair(0,20));
-        fanSteps.append(fanStepPair(65,100));
-        fanSteps.append(fanStepPair(90,100));
 
-        for (short i = 0;  i < fanSteps.count(); ++i)
-            ui->list_fanSteps->addTopLevelItem(new QTreeWidgetItem(QStringList() << QString().setNum(fanSteps[i].temperature) <<  QString().setNum(fanSteps[i].speed)));
+        fanProfileSteps p;
+        p.insert(0,minFanStepsSpeed);
+        p.insert(65,maxFanStepsSpeed);
+        p.insert(90,maxFanStepsSpeed);
+
+        fanProfiles.insert("default", p);
     }
 
-    makeFanProfileGraph(fanSteps);
+    makeFanProfileListaAndGraph(fanProfiles.value("default"));
 }
 
-void radeon_profile::makeFanProfileGraph(const QList<fanStepPair> &steps) {
+void radeon_profile::makeFanProfileListaAndGraph(const fanProfileSteps &profile) {
     ui->plotFanProfile->graph(0)->clearData();
+    ui->list_fanSteps->clear();
 
-    for (int i = 0; i < steps.count(); ++i)
-        ui->plotFanProfile->graph(0)->addData(steps[i].temperature,steps[i].speed);
+    for (int temperature : profile.keys()) {
+        ui->plotFanProfile->graph(0)->addData(temperature, profile.value(temperature));
+        ui->list_fanSteps->addTopLevelItem(new QTreeWidgetItem(QStringList() << QString::number(temperature) << QString::number(profile.value(temperature))));
+    }
 
     ui->plotFanProfile->replot();
 }
 
 void radeon_profile::saveFanProfiles() {
     QFile fsPath(fanStepsPath);
-    if (fsPath.open(QIODevice::WriteOnly)) {
-        QString profile = "default|";
-        for (int i = 0; i < fanSteps.count(); ++i)
-            profile.append(QString().setNum(fanSteps[i].temperature)+ "#" + QString().setNum(fanSteps[i].speed)  + "|");
 
-        fsPath.write(profile.toLatin1());
+    if (fsPath.open(QIODevice::WriteOnly)) {
+        QString profileString;
+
+        for (QString profile : fanProfiles.keys()) {
+            profileString.append(profile+"|");
+
+            fanProfileSteps steps = fanProfiles.value(profile);
+
+            for (int temperature : steps.keys())
+                profileString.append(QString::number(temperature)+ "#" + QString::number(steps.value(temperature))  + "|");
+
+
+            profileString.append('\n');
+        }
+
+        fsPath.write(profileString.toLatin1());
         fsPath.close();
     }
+}
+
+bool radeon_profile::fanStepIsValid(const int temperature, const int fanSpeed) {
+    return temperature >= minFanStepsTemp &&
+            temperature <= maxFanStepsTemp &&
+            fanSpeed >= minFanStepsSpeed &&
+            fanSpeed <= maxFanStepsSpeed;
+}
+
+void radeon_profile::addFanStep(const int temperature, const int fanSpeed) {
+
+    if (!fanStepIsValid(temperature, fanSpeed)) {
+        qWarning() << "Invalid value, can't be inserted into the fan step list:" << temperature << fanSpeed;
+        return;
+    }
+
+    currentFanProfile.insert(temperature,fanSpeed);
+
+    const QString temperatureString = QString::number(temperature),
+            speedString = QString::number(fanSpeed);
+    const QList<QTreeWidgetItem*> existing = ui->list_fanSteps->findItems(temperatureString,Qt::MatchExactly);
+
+    if (existing.isEmpty()) { // The element does not exist
+        ui->list_fanSteps->addTopLevelItem(new QTreeWidgetItem(QStringList() << temperatureString << speedString));
+        ui->list_fanSteps->sortItems(0, Qt::AscendingOrder);
+    } else // The element exists already, overwrite it
+        existing.first()->setText(1,speedString);
+
+    makeFanProfileListaAndGraph(currentFanProfile);
+}
+
+void radeon_profile::showWindow() {
+    if (ui->cb_minimizeTray->isChecked() && ui->cb_startMinimized->isChecked())
+        return;
+
+    if (ui->cb_startMinimized->isChecked())
+        this->showMinimized();
+    else
+        this->showNormal();
 }
