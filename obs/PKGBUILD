@@ -1,40 +1,45 @@
 # Maintainer: marazmista <marazmista@gmail.com>
 
-pkgname=radeon-profile
+pkgname=radeon-profile-git
+pkgbase=radeon-profile
 pkgver=1
-pkgrel=$(uname --machine)
+pkgrel=1
 pkgdesc="App for display info about radeon card"
 url="http://github.com/marazmista/radeon-profile"
 arch=('i686' 'x86_64')
 license=('GPL2')
-makedepends=('git' 'qt5-base' 'qtchooser' 'make' 'libxrandr')
-depends=('qt5-base' 'libxrandr')
+depends=('qt5-base' 'libxkbcommon-x11' 'libxrandr')
+makedepends=('qt5-tools')
 optdepends=('radeon-profile-daemon: system daemon for reading card info'
-	'lm_sensors: to show gpu temperature' 
-	'sudo: start with root privilages without password' 
-	'mesa-demos: for glxinfo' 
-	'xorg-xdriinfo: display driver name' 
+	'lm_sensors: to show gpu temperature'
+	'sudo: start with root privilages without password'
+	'mesa-demos: for glxinfo'
+	'xorg-xdriinfo: display driver name'
 	'xorg-xrandr: show card connected outputs'
 	'xf86-video-ati: radeon open source driver')
 provides=('radeon-profile')
 replaces=('radeon-profile')
-conflicts=('radeon-profile')
-source=(radeon-profile-${pkgver}.tar.gz)
+source=($pkgbase-${pkgver}.tar.gz)
 sha256sums=('SKIP')
- 
-build() {
-	mkdir -p build
-	cd build
-	qmake ../radeon-profile-$pkgver/radeon-profile/
-	make
-}
- 
-package() {
-	cd build/
-	make prefix="${pkgdir}" install
-	install -Dm755 "$srcdir/build/radeon-profile" "$pkgdir/usr/bin/radeon-profile"
 
-    	cd $srcdir/radeon-profile-$pkgver/radeon-profile/extra/
-	install -Dm644 "radeon-profile.png" "$pkgdir/usr/share/pixmaps/radeon-profile.png"
-	install -Dm644 "radeon-profile.desktop" "$pkgdir/usr/share/applications/radeon-profile.desktop"
+build() {
+cd "$srcdir/$pkgbase-$pkgver/$pkgbase"
+lrelease radeon-profile.pro
+qmake-qt5
+make
+}
+
+package() {
+cd "$srcdir/$pkgbase-$pkgver/$pkgbase"
+
+install -Dm755 "radeon-profile" "$pkgdir/usr/bin/radeon-profile"
+
+install -Dm644 "extra/radeon-profile.png" "$pkgdir/usr/share/pixmaps/radeon-profile.png"
+install -Dm644 "extra/radeon-profile.desktop" "$pkgdir/usr/share/applications/radeon-profile.desktop"
+
+cd translations
+for translation in *.qm
+do
+install -Dm644 $translation "$pkgdir/usr/share/radeon-profile/$translation"
+done
 }

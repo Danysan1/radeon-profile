@@ -8,21 +8,30 @@
 		<param name="scm">git</param>
 		<!-- <param name="url">https://github.com/marazmista/radeon-profile.git</param> OBS is still not supported
 		<param name="versionformat">@PARENT_TAG@.@TAG_OFFSET@</param> -->
-      <param name="url">https://github.com/Danysan1/radeon-profile.git</param>
+      	<param name="url">https://github.com/Danysan1/radeon-profile.git</param>
+      	<param name="revision">openBuildService</param>
 		<param name="versionformat">%ci</param>
 	</service>
-
+  
 	<!-- Extract build scripts -->
 	<service name="extract_file">
     		<param name="archive">*.tar</param>
-    		<param name="files">*/obs/debian.changelog  */obs/debian.control  */obs/debian.copyright  */obs/debian.rules  */obs/PKGBUILD  */obs/radeon-profile.dsc  */obs/radeon-profile.spec</param>
+    		<param name="files">
+              	*/obs/PKGBUILD
+              	*/obs/debian.changelog
+              	*/obs/debian.control
+              	*/obs/debian.copyright
+              	*/obs/debian.rules
+				*/obs/debian.compat
+              	*/obs/radeon-profile.dsc
+              	*/obs/radeon-profile.spec</param>
 	</service>
 
-	<!-- Debian packaging system wants a .tar.gz source file ¯\_(ツ)_/¯ -->
+	<!-- Debian packaging system wants a .tar.gz source file-->
 	<service name="recompress">
 		<param name="compression">gz</param>
 		<param name="file">*.tar</param>
 	</service>
-	
+ 
   <service name="set_version"/>
 </services>
