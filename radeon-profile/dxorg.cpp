@@ -178,7 +178,8 @@ QString dXorg::getClocksRawData(bool resolvingGpuFeatures) {
         // because we need correctly figure out what is available
         // see: https://stackoverflow.com/a/11487434/2347196
         if (resolvingGpuFeatures) {
-            QTime delayTime = QTime::currentTime().addMSecs(1100);
+            QTime delayTime = QTime::currentTime().addMSecs(1200);
+            qDebug() << "Waiting for first daemon data read...";
             while (QTime::currentTime() < delayTime)
                 QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
         }
@@ -435,7 +436,7 @@ QString dXorg::findSysfsHwmonForGPU() {
 }
 
 QStringList dXorg::getGLXInfo(QProcessEnvironment env) {
-    return globalStuff::grabSystemInfo("glxinfo -B",env);
+    return globalStuff::grabSystemInfo("glxinfo -B",env).filter(QRegExp(".+"));
 }
 
 QList<QTreeWidgetItem *> dXorg::getModuleInfo() {
