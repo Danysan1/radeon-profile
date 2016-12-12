@@ -43,6 +43,7 @@ void radeon_profile::saveConfig() {
     settings.setValue("saveSelectedFanMode",ui->cb_saveFanMode->isChecked());
     settings.setValue("fanMode",ui->fanModesTabs->currentIndex());
     settings.setValue("fanProfileName",ui->l_currentFanProfile->text());
+    settings.setValue("enableZeroPercentFanSpeed", ui->cb_zeroPercentFanSpeed->isChecked());
 
     settings.setValue("overclockEnabled", ui->cb_enableOverclock->isChecked());
     settings.setValue("overclockAtLaunch", ui->cb_overclockAtLaunch->isChecked());
@@ -104,6 +105,7 @@ void radeon_profile::loadConfig() {
     ui->fanSpeedSlider->setValue(settings.value("fanSpeedSlider",80).toInt());
     ui->cb_saveFanMode->setChecked(settings.value("saveSelectedFanMode",false).toBool());
     ui->l_currentFanProfile->setText(settings.value("fanProfileName","default").toString());
+    ui->cb_zeroPercentFanSpeed->setChecked(settings.value("enableZeroPercentFanSpeed",false).toBool());
     if (ui->cb_saveFanMode->isChecked())
         ui->fanModesTabs->setCurrentIndex(settings.value("fanMode",0).toInt());
 
@@ -163,6 +165,9 @@ void radeon_profile::loadConfig() {
     else
         ui->mainTabs->setTabEnabled(1,false);
 
+    if (ui->cb_zeroPercentFanSpeed->isChecked())
+        setupMinFanSpeedSetting(0);
+
     ui->list_currentGPUData->setAlternatingRowColors(ui->cb_alternateRow->isChecked());
     ui->list_glxinfo->setAlternatingRowColors(ui->cb_alternateRow->isChecked());
     ui->list_modInfo->setAlternatingRowColors(ui->cb_alternateRow->isChecked());
@@ -198,7 +203,7 @@ void radeon_profile::loadFanProfiles() {
     QFile fsPath(fanStepsPath);
 
     if (fsPath.open(QIODevice::ReadOnly)) {
-        QStringList profiles = QString(fsPath.readAll()).split('\n',QString::SkipEmptyParts);
+        QStringList profiles = QString(fsPath.readAll()).trimmed().split('\n',QString::SkipEmptyParts);
 
         for (QString profileLine : profiles) {
             QStringList profileData = profileLine.split("|",QString::SkipEmptyParts);
@@ -225,9 +230,11 @@ void radeon_profile::loadFanProfiles() {
         p.insert(90,maxFanStepsSpeed);
 
         fanProfiles.insert("default", p);
+        ui->combo_fanProfiles->addItem("default");
+        ui->l_currentFanProfile->setText("default");
     }
 
-    makeFanProfileListaAndGraph(fanProfiles.value("default"));
+    makeFanProfileListaAndGraph(fanProfiles.value(ui->combo_fanProfiles->currentText()));
 }
 
 void radeon_profile::makeFanProfileListaAndGraph(const fanProfileSteps &profile) {
@@ -265,9 +272,8 @@ void radeon_profile::saveFanProfiles() {
     }
 }
 
-bool radeon_profile::fanStepIsValid(const int temperature, const int fanSpeed) {
-    return temperature >= minFanStepsTemp &&
-            temperature <= maxFanStepsTemp &&
+bool radeon_profile::fanStepIsValid(const unsigned int temperature, const unsigned int fanSpeed) {
+    return temperature <= maxFanStepsTemp &&
             fanSpeed >= minFanStepsSpeed &&
             fanSpeed <= maxFanStepsSpeed;
 }
@@ -279,7 +285,8 @@ void radeon_profile::addFanStep(const int temperature, const int fanSpeed) {
         return;
     }
 
-    currentFanProfile.insert(temperature,fanSpeed);
+    fanProfileSteps editedFanProfile = fanProfiles.value(ui->combo_fanProfiles->currentText(), currentFanProfile);
+    editedFanProfile.insert(temperature,fanSpeed);
 
     const QString temperatureString = QString::number(temperature),
             speedString = QString::number(fanSpeed);
@@ -291,7 +298,7 @@ void radeon_profile::addFanStep(const int temperature, const int fanSpeed) {
     } else // The element exists already, overwrite it
         existing.first()->setText(1,speedString);
 
-    makeFanProfileListaAndGraph(currentFanProfile);
+    makeFanProfileListaAndGraph(editedFanProfile);
 }
 
 void radeon_profile::showWindow() {

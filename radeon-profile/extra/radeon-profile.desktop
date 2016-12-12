@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Radeon Profile
-GenericName=Radeon Profile
+GenericName=Control panel
 Comment=Monitor Radeon GPU parameters and switch power profiles
 Exec=radeon-profile
 Icon=radeon-profile

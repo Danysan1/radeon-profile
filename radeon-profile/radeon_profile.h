@@ -24,10 +24,10 @@
 #define minFanStepsTemp 0
 #define maxFanStepsTemp 99
 
-#define minFanStepsSpeed 10
+//#define minFanStepsSpeed 10
 #define maxFanStepsSpeed 100
 
-#define appVersion 20161123
+#define appVersion 20161208
 
 namespace Ui {
 class radeon_profile;
@@ -138,18 +138,20 @@ private slots:
     void on_cb_enableOverclock_toggled(bool enable);
     void on_btn_applyOverclock_clicked();
     void on_slider_overclock_valueChanged(int value);
-    void on_combo_fanProfiles_currentTextChanged(const QString &arg1);
     void on_btn_activateFanProfile_clicked();
     void on_btn_removeFanProfile_clicked();
     void on_btn_saveFanProfile_clicked();
     void on_btn_saveAsFanProfile_clicked();
     void fanProfileMenuActionClicked(QAction *a);
     void on_btn_export_clicked();
+    void on_cb_zeroPercentFanSpeed_clicked(bool checked);
+    void on_combo_fanProfiles_currentIndexChanged(const QString &arg1);
 
 private:
     gpu device;
     static const QString settingsPath;
     QList<execBin*> *execsRunning;
+    unsigned int minFanStepsSpeed;
 
     fanProfileSteps currentFanProfile;
     QMap<QString, fanProfileSteps> fanProfiles;
@@ -188,6 +190,8 @@ private:
     void addChild(QTreeWidget * parent, const QString &leftColumn, const QString  &rightColumn);
     void setupFanProfilesMenu(const bool rebuildMode = false);
     int findCurrentFanProfileMenuIndex();
+    void setupMinFanSpeedSetting(unsigned int speed);
+
     /**
      * @brief configureDaemonAutoRefresh Reconfigures the daemon with indicated auto-refresh settings.
      * @param enabled If true enables auto-refresh, otherwise disables it.
@@ -206,7 +210,7 @@ private:
      * @param fanSpeed
      * @return If the step is valid.
      */
-    bool fanStepIsValid(int temperature, int fanSpeed);
+    bool fanStepIsValid(unsigned int temperature, unsigned int fanSpeed);
 
     /**
      * @brief addFanStep Adds a single fan step to the custom curve steps.
@@ -218,7 +222,6 @@ private:
 
     void fillConnectors();
     void fillModInfo();
-
     bool askConfirmation(const QString title, const QString question);
 };
 
