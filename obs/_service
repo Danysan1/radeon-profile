@@ -3,14 +3,14 @@
   	<!-- The git copy of this file is ignored by the Open Build Service.
   	 Hence, whenever this file is edited it must be copied to the OBS in order to work -->
   
+	<!-- https://en.opensuse.org/openSUSE:RPM_conditional_builds -->
+	<!-- https://en.opensuse.org/openSUSE:Build_Service_cross_distribution_howto -->
 	<!-- https://en.opensuse.org/openSUSE:Build_Service_private_instance_software_live_cycle#Step_by_step -->
 	<service name="tar_scm">
 		<param name="scm">git</param>
-		<!-- <param name="url">https://github.com/marazmista/radeon-profile.git</param> OBS is still not supported
-		<param name="versionformat">@PARENT_TAG@.@TAG_OFFSET@</param> -->
-      	<param name="url">https://github.com/Danysan1/radeon-profile.git</param>
-      	<param name="revision">openBuildService</param>
-		<param name="versionformat">%ci</param>
+		<param name="url">https://github.com/marazmista/radeon-profile.git</param>
+		<param name="versionformat">@PARENT_TAG@</param> <!-- the package version (uses the git tag) -->
+		<param name="revision">20161208</param> <!-- git branch/tag to use-->
 	</service>
   
 	<!-- Extract build scripts -->

@@ -1,7 +1,6 @@
 # Maintainer: marazmista <marazmista@gmail.com>
 
-pkgname=radeon-profile-git
-pkgbase=radeon-profile
+pkgname=radeon-profile
 pkgver=1
 pkgrel=1
 pkgdesc="App for display info about radeon card"
@@ -12,25 +11,26 @@ depends=('qt5-base' 'libxkbcommon-x11' 'libxrandr')
 makedepends=('qt5-tools')
 optdepends=('radeon-profile-daemon: system daemon for reading card info'
 	'lm_sensors: to show gpu temperature'
-	'sudo: start with root privilages without password'
+	'sudo: start with root privileges without password'
 	'mesa-demos: for glxinfo'
 	'xorg-xdriinfo: display driver name'
 	'xorg-xrandr: show card connected outputs'
+	'xf86-video-amdgpu: radeon open source driver'
 	'xf86-video-ati: radeon open source driver')
 provides=('radeon-profile')
-replaces=('radeon-profile')
-source=($pkgbase-${pkgver}.tar.gz)
+replaces=('radeon-profile-git')
+source=(radeon-profile-$pkgver.tar.gz)
 sha256sums=('SKIP')
 
 build() {
-cd "$srcdir/$pkgbase-$pkgver/$pkgbase"
+cd "$srcdir/radeon-profile-$pkgver/radeon-profile"
 lrelease radeon-profile.pro
 qmake-qt5
 make
 }
 
 package() {
-cd "$srcdir/$pkgbase-$pkgver/$pkgbase"
+cd "$srcdir/radeon-profile-$pkgver/radeon-profile"
 
 install -Dm755 "radeon-profile" "$pkgdir/usr/bin/radeon-profile"
 
