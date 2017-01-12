@@ -39,6 +39,11 @@ for IN in $@ ; do
 		ARG="$ARG QMAKE_CXXFLAGS+='${IN##CXXFLAGS=}'"
 		;;
 
+	'no-ioctl')
+		ARG="$ARG QMAKE_CFLAGS+='-DNO_IOCTL'"
+		ARG="$ARG QMAKE_CXXFLAGS+='-DNO_IOCTL'"
+		;;
+
 	'LDFLAGS='*)
 		ARG="$ARG QMAKE_LFLAGS+='${IN##LDFLAGS=}'"
 		;;

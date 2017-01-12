@@ -8,4 +8,4 @@ Terminal=false
 Type=Application
 Categories=System;Monitor;HardwareSettings;Settings;Qt;
 StartupNotify=false
-Keywords=Radeon;GPU;Video card;
+Keywords=GPU;Video card;Temperature;Fan speed;
