@@ -104,4 +104,3 @@ qtPrepareTool(LRELEASE, lrelease)
 translate.extra = $$LRELEASE $$_PRO_FILE_
 translate.CONFIG += no_check_exist
 INSTALLS += binary icon desktop appdata translate
-
