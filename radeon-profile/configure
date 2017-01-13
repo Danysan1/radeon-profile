@@ -1,25 +1,33 @@
 #!/bin/bash
 
+##### SEARCH QMAKE #####
+COMMAND=$(which 'qmake') # Search qmake
+if [ -z $COMMAND ] ; then COMMAND=$(which 'qmake-qt5'); fi # qmake not found, search qmake-qt5
+if [ -z $COMMAND ] ; then COMMAND=$(which 'qmake-qt4'); fi # qmake-qt5 not found, search qmake-qt4
+if [ -z $COMMAND ] ; then echo "ERROR: Qmake not found"; exit -1; fi # no qmake found, exit with error
+
+
+##### GET ARGUMENTS #####
 if [ "$CFLAGS" ] ; then
-	ARG="$ARG QMAKE_CFLAGS+='$CFLAGS'"
+	ARG+=("QMAKE_CFLAGS+='$CFLAGS'")
 fi
 
 if [ "$CXXFLAGS" ] ; then
-	ARG="$ARG QMAKE_CXXFLAGS+='$CXXFLAGS'"
+	ARG+=("QMAKE_CXXFLAGS+='$CXXFLAGS'")
 fi
 
 if [ "$LDFLAGS" ] ; then
-	ARG="$ARG QMAKE_LFLAGS+='$LDFLAGS'"
+	ARG+=("QMAKE_LFLAGS+='$LDFLAGS'")
 fi
 
 for IN in $@ ; do
 	case $IN in
 	'--prefix='*)
-		ARG="$ARG PREFIX='${IN##--prefix=}'"
+		ARG+=("PREFIX='${IN##--prefix=}'")
 		;;
 
 	'--libdir='*)
-		ARG="$ARG QMAKE_LIBDIR+='${IN##--libdir=}'"
+		ARG+=("QMAKE_LIBDIR+='${IN##--libdir=}'")
 		;;
 
 	'--includedir='*)
@@ -27,25 +35,24 @@ for IN in $@ ; do
 		if [ "$DIR" == "/usr/include" ] ; then
 		    echo "$0: ignoring '$IN', see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=70129#c0"
 		else
-		    ARG="$ARG QMAKE_INCDIR+='$DIR'"
+		    ARG+=("QMAKE_INCDIR+='$DIR'")
 		fi
 		;;
 
 	'CFLAGS='*)
-		ARG="$ARG QMAKE_CFLAGS+='${IN##CFLAGS=}'"
+		ARG+=("QMAKE_CFLAGS+='${IN##CFLAGS=}'")
 		;;
 
 	'CXXFLAGS='*)
-		ARG="$ARG QMAKE_CXXFLAGS+='${IN##CXXFLAGS=}'"
+		ARG+=("QMAKE_CXXFLAGS+='${IN##CXXFLAGS=}'")
 		;;
 
 	'no-ioctl')
-		ARG="$ARG QMAKE_CFLAGS+='-DNO_IOCTL'"
-		ARG="$ARG QMAKE_CXXFLAGS+='-DNO_IOCTL'"
+		ARG+=("DEFINES+='NO_IOCTL'")
 		;;
 
 	'LDFLAGS='*)
-		ARG="$ARG QMAKE_LFLAGS+='${IN##LDFLAGS=}'"
+		ARG+=("QMAKE_LFLAGS+='${IN##LDFLAGS=}'")
 		;;
 
 	'QMAKE_STRIP='*)
@@ -55,7 +62,7 @@ for IN in $@ ; do
 	'-W'*)
 		;&
 	'-d')
-		ARG="$ARG $IN"
+		ARG+=("$IN")
 		;;
 
 	'--help')
@@ -85,6 +92,7 @@ for IN in $@ ; do
 	esac
 done
 
-echo "qmake $ARG"
 
-eval qmake-qt5 $ARG || eval qmake-qt4 $ARG || eval qmake $ARG
+##### EXECUTE #####
+echo "Executing: $COMMAND ${ARG[@]}"
+("$COMMAND" "${ARG[@]}")
