@@ -19,7 +19,7 @@
 		{
 			"name": "radeon-profile",
 			"subdir": "radeon-profile",
-			"no-autogen": true,
+			"config-opts": [ "no-ioctl" ],
 			"sources": [
 				{
 					"type": "git",
