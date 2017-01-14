@@ -34,9 +34,8 @@ For full functionality:
 * Icon: http://proicons.deviantart.com/art/Graphics-Cards-Icons-H1-Pack-161178339
 
 # Bulid
-Qt4: `qmake-qt4 && make` in source directory.
+`./configure && make` in source directory.
 
-Qt5: `qmake && make` in source directory.
 
 # Troubleshooting
 * __"no values":__ Check `/sys/kernel/debug`. If it's empty, try `# mount -t debugfs none /sys/kernel/debug`
