@@ -618,6 +618,7 @@ globalStuff::driverFeatures dXorg::figureOutDriverFeatures() {
     globalStuff::driverFeatures features;
     features.temperatureAvailable =  (currentTempSensor == dXorg::TS_UNKNOWN) ? false : true;
 
+    // First data read & Regex setup
     QString data = getClocksRawData(true);
     setupRegex(data);
     globalStuff::gpuClocksStruct test = dXorg::getClocks(data);
@@ -628,6 +629,7 @@ globalStuff::driverFeatures dXorg::figureOutDriverFeatures() {
     if (test.coreClk == -1)
         test = getFeaturesFallback();
 
+    // Check available data
     features.coreClockAvailable = !(test.coreClk == -1);
     features.memClockAvailable = !(test.memClk == -1);
     features.coreVoltAvailable = !(test.coreVolt == -1);
@@ -635,31 +637,38 @@ globalStuff::driverFeatures dXorg::figureOutDriverFeatures() {
 
     features.pm = currentPowerMethod;
 
+    // Check if it is possible to change power profile
     if(daemonConnected() && (currentPowerMethod != globalStuff::PM_UNKNOWN)){
         qDebug() << "Daemon will be used to change profile";
         features.canChangeProfile = true;
+    } else {
+        switch (currentPowerMethod) {
+        case globalStuff::DPM: {
+            QFile f(filePaths.dpmStateFilePath);
+            if (f.open(QIODevice::WriteOnly)){
+                qDebug() << filePaths.dpmStateFilePath << "will be used to change power profile";
+                features.canChangeProfile = true;
+                f.close();
+            }
+            break;
+        }
+
+        case globalStuff::PROFILE: {
+            QFile f(filePaths.profilePath);
+            if (f.open(QIODevice::WriteOnly)) {
+                qDebug() << filePaths.profilePath << "will be used to change power profile";
+                features.canChangeProfile = true;
+                f.close();
+            }
+        }
+
+        case globalStuff::PM_UNKNOWN:
+            qDebug() << "Unknown power method, can't change power profile";
+            break;
+        }
     }
 
-    switch (currentPowerMethod) {
-    case globalStuff::DPM: {
-        QFile f(filePaths.dpmStateFilePath);
-        if (f.open(QIODevice::WriteOnly)){
-            features.canChangeProfile = true;
-            f.close();
-        }
-        break;
-    }
-    case globalStuff::PROFILE: {
-        QFile f(filePaths.profilePath);
-        if (f.open(QIODevice::WriteOnly)) {
-            features.canChangeProfile = true;
-            f.close();
-        }
-    }
-    case globalStuff::PM_UNKNOWN:
-        break;
-    }
-
+    // Check if pwm is available & get max pwm speed
     if (!filePaths.pwmEnablePath.isEmpty()) {
         QFile f(filePaths.pwmEnablePath);
         f.open(QIODevice::ReadOnly);
