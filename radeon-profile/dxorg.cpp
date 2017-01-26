@@ -468,29 +468,44 @@ void dXorg::setNewValue(const QString &filePath, const QString &newValue) {
         qWarning() << "Unable to open " << filePath << " to write " << newValue;
 }
 
-/** Translate a power profile into its actual string */
-QString powerProfilesToString(globalStuff::powerProfiles profile){
-    switch (profile) {
-    case globalStuff::BATTERY: return dpm_battery;
-    case globalStuff::BALANCED: return dpm_balanced;
-    case globalStuff::PERFORMANCE: return dpm_performance;
-    case globalStuff::AUTO: return profile_auto;
-    case globalStuff::DEFAULT: return profile_default;
-    case globalStuff::HIGH: return profile_high;
-    case globalStuff::MID: return profile_mid;
-    case globalStuff::LOW: return profile_low;
-    default: return "ERROR";
-    }
-}
-
 void dXorg::setPowerProfile(globalStuff::powerProfiles _newPowerProfile) {
     if(Q_UNLIKELY(currentPowerMethod == globalStuff::PM_UNKNOWN)){
         qCritical() << "Asked to set power profile but no power method available";
         return;
     }
 
-    QString newValue = powerProfilesToString(_newPowerProfile),
-            path = Q_LIKELY(currentPowerMethod==globalStuff::DPM) ? filePaths.dpmStateFilePath : filePaths.profilePath;
+    QString newValue;
+    switch (_newPowerProfile) {
+    case globalStuff::BATTERY:
+        newValue = dpm_battery;
+        break;
+    case globalStuff::BALANCED:
+        newValue = dpm_balanced;
+        break;
+    case globalStuff::PERFORMANCE:
+        newValue = dpm_performance;
+        break;
+    case globalStuff::AUTO:
+        newValue = profile_auto;
+        break;
+    case globalStuff::DEFAULT:
+        newValue = profile_default;
+        break;
+    case globalStuff::HIGH:
+        newValue = profile_high;
+        break;
+    case globalStuff::MID:
+        newValue = profile_mid;
+        break;
+    case globalStuff::LOW:
+        newValue = profile_low;
+        break;
+    default:
+        qCritical() << "Unknown power profile: " << _newPowerProfile;
+        return;
+    }
+
+    QString const path = (currentPowerMethod == globalStuff::DPM) ? filePaths.dpmStateFilePath : filePaths.profilePath;
 
     if (daemonConnected()) {
         QString command; // SIGNAL_SET_VALUE + SEPARATOR + VALUE + SEPARATOR + PATH + SEPARATOR
@@ -504,18 +519,22 @@ void dXorg::setPowerProfile(globalStuff::powerProfiles _newPowerProfile) {
         setNewValue(path, newValue);
 }
 
-/** Translate a forced power level into its actual string */
-QString forcePowerLevelsToString(globalStuff::forcePowerLevels level){
-    switch(level){
-    case globalStuff::F_AUTO: return dpm_auto;
-    case globalStuff::F_LOW: return dpm_low;
-    case globalStuff::F_HIGH: return dpm_high;
-    default: return "ERROR";
-    }
-}
-
 void dXorg::setForcePowerLevel(globalStuff::forcePowerLevels _newForcePowerLevel) {
-    QString newValue = forcePowerLevelsToString(_newForcePowerLevel);
+    QString newValue;
+    switch (_newForcePowerLevel) {
+    case globalStuff::F_AUTO:
+        newValue = dpm_auto;
+        break;
+    case globalStuff::F_HIGH:
+        newValue = dpm_high;
+        break;
+    case globalStuff::F_LOW:
+        newValue = dpm_low;
+        break;
+    default:
+        qCritical() << "Unknown forced power level:" << _newForcePowerLevel;
+        return;
+    }
 
     if (daemonConnected()) {
         QString command; // SIGNAL_SET_VALUE + SEPARATOR + VALUE + SEPARATOR + PATH + SEPARATOR
@@ -660,10 +679,11 @@ globalStuff::driverFeatures dXorg::figureOutDriverFeatures() {
                 features.canChangeProfile = true;
                 f.close();
             }
+            break;
         }
 
         case globalStuff::PM_UNKNOWN:
-            qDebug() << "Unknown power method, can't change power profile";
+            qWarning() << "Unknown power method, can't change power profile";
             break;
         }
     }
@@ -674,6 +694,7 @@ globalStuff::driverFeatures dXorg::figureOutDriverFeatures() {
         f.open(QIODevice::ReadOnly);
 
         if (QString(f.readLine(2))[0] != pwm_disabled) {
+            qDebug() << "Found pwm enabled in" << filePaths.pwmEnablePath;
             features.pwmAvailable = true;
 
             QFile fPwmMax(filePaths.pwmMaxSpeedPath);
