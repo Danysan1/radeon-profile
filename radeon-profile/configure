@@ -51,6 +51,10 @@ for IN in $@ ; do
 		ARG+=("DEFINES+='NO_IOCTL'")
 		;;
 
+	'no-amdgpu-ioctl')
+		ARG+=("DEFINES+='NO_AMDGPU_IOCTL'")
+		;;
+
 	'LDFLAGS='*)
 		ARG+=("QMAKE_LFLAGS+='${IN##LDFLAGS=}'")
 		;;

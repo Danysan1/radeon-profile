@@ -70,9 +70,11 @@ TRANSLATIONS += translations/strings.it.ts \
     translations/strings.hr.ts
 
 DISTFILES += \
-    configure \
     $$TRANSLATIONS
 
+OTHER_FILES += \
+    configure \
+    Doxyfile
 
 # AUTOMATIC MAKEFILE INSTRUCTIONS FOR make clean
 # http://doc.qt.io/qt-5/qmake-variable-reference.html#qmake-clean
@@ -102,5 +104,5 @@ translate.path = /$(DESTDIR)/$$PREFIX/share/radeon-profile/
 translate.files = $$QMFILES
 qtPrepareTool(LRELEASE, lrelease)
 translate.extra = $$LRELEASE $$_PRO_FILE_
-translate.CONFIG += no_check_exist
+translate.CONFIG += no_check_exist # By default qmake install targets work only with files that exist before the execution of qmake; translations are generated after, this flag tells qmake to install them anyway
 INSTALLS += binary icon desktop appdata translate
