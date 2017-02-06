@@ -167,7 +167,7 @@ void radeon_profile::gpuChanged()
 {
     device.changeGpu(ui->combo_gpus->currentIndex());
     setupUiEnabledFeatures(device.features);
-    timerEvent();
+    timerEvent(NULL);
     refreshBtnClicked();
 }
 
@@ -200,8 +200,7 @@ void radeon_profile::closeEvent(QCloseEvent *e) {
         }
     }
 
-    timer->stop();
-    delete timer;
+    killTimer(timer);
 
     saveConfig();
 
@@ -225,7 +224,8 @@ void radeon_profile::on_spin_lineThick_valueChanged(int arg1)
 
 void radeon_profile::on_spin_timerInterval_valueChanged(double arg1)
 {
-    timer->setInterval(arg1*1000);
+    killTimer(timer);
+    timer = startTimer(arg1*1000);
 }
 
 void radeon_profile::on_cb_graphs_clicked(bool checked)

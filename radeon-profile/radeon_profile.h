@@ -70,13 +70,13 @@ public:
     QSystemTrayIcon *trayIcon;
     QAction *closeApp, *dpmSetBattery, *dpmSetBalanced, *dpmSetPerformance,*changeProfile, *refreshWhenHidden;
     QMenu *dpmMenu, *trayMenu, *optionsMenu, *forcePowerMenu, *fanProfilesMenu;
-    QTimer *timer;
+    static int timer;
     static unsigned int minFanStepsSpeed;
 
     typedef QMap<int, unsigned int> fanProfileSteps;
 
 private slots:
-    void timerEvent();
+    void timerEvent(QTimerEvent *event);
     void on_btn_dpmBattery_clicked();
     void on_btn_dpmBalanced_clicked();
     void on_btn_dpmPerformance_clicked();

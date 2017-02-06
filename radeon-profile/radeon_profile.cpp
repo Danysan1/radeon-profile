@@ -27,6 +27,7 @@
 #include <QDebug>
 
 unsigned int radeon_profile::minFanStepsSpeed = 10;
+int radeon_profile::timer;
 
 radeon_profile::radeon_profile(QStringList a,QWidget *parent) :
     QMainWindow(parent),
@@ -37,7 +38,6 @@ radeon_profile::radeon_profile(QStringList a,QWidget *parent) :
     statsTickCounter = 0;
 
     ui->setupUi(this);
-    timer = new QTimer(this);
 
     // checks if running as root
     if (globalStuff::grabSystemInfo("whoami")[0] == "root") {
@@ -77,8 +77,6 @@ radeon_profile::radeon_profile(QStringList a,QWidget *parent) :
     if(ui->cb_enableOverclock->isChecked() && ui->cb_overclockAtLaunch->isChecked())
         ui->btn_applyOverclock->click();
 
-    // timer init
-    timer->setInterval(ui->spin_timerInterval->value()*1000);
 
     // fill tables with data at the start //
     refreshGpuData();
@@ -87,8 +85,8 @@ radeon_profile::radeon_profile(QStringList a,QWidget *parent) :
     fillModInfo();
     refreshUI();
 
-    timer->start();
-    timerEvent();
+    timerEvent(NULL);
+    timer = startTimer(ui->spin_timerInterval->value()*1000);
 
     addRuntimeWidgets();
     connectSignals();
@@ -108,7 +106,6 @@ void radeon_profile::connectSignals()
     connect(ui->combo_pProfile,SIGNAL(currentIndexChanged(int)),this,SLOT(changeProfileFromCombo()));
     connect(ui->combo_pLevel,SIGNAL(currentIndexChanged(int)),this,SLOT(changePowerLevelFromCombo()));
 
-    connect(timer,SIGNAL(timeout()),this,SLOT(timerEvent()));
     connect(ui->timeSlider,SIGNAL(valueChanged(int)),this,SLOT(changeTimeRange()));
 }
 
@@ -298,7 +295,10 @@ void radeon_profile::updateExecLogs() {
 }
 //===================================
 // === Main timer loop  === //
-void radeon_profile::timerEvent() {
+void radeon_profile::timerEvent(QTimerEvent *event) {
+    if(event != NULL)
+        event->accept();
+
     if (!refreshWhenHidden->isChecked() && this->isHidden()) {
 
         // even if in tray, keep the fan control active (if enabled)
