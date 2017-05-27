@@ -1,0 +1,102 @@
+#!/bin/bash
+
+##### SEARCH QMAKE #####
+COMMAND=$(which 'qmake') # Search qmake
+if [ -z $COMMAND ] ; then COMMAND=$(which 'qmake-qt5'); fi # qmake not found, search qmake-qt5
+if [ -z $COMMAND ] ; then COMMAND=$(which 'qmake-qt4'); fi # qmake-qt5 not found, search qmake-qt4
+if [ -z $COMMAND ] ; then echo "ERROR: Qmake not found"; exit -1; fi # no qmake found, exit with error
+
+
+##### GET ARGUMENTS #####
+if [ "$CFLAGS" ] ; then
+	ARG+=("QMAKE_CFLAGS+='$CFLAGS'")
+fi
+
+if [ "$CXXFLAGS" ] ; then
+	ARG+=("QMAKE_CXXFLAGS+='$CXXFLAGS'")
+fi
+
+if [ "$LDFLAGS" ] ; then
+	ARG+=("QMAKE_LFLAGS+='$LDFLAGS'")
+fi
+
+for IN in $@ ; do
+	case $IN in
+	'--prefix='*)
+		ARG+=("PREFIX='${IN##--prefix=}'")
+		;;
+
+	'--libdir='*)
+		ARG+=("QMAKE_LIBDIR+='${IN##--libdir=}'")
+		;;
+
+	'--includedir='*)
+		DIR="${IN##--includedir=}"
+		if [ "$DIR" == "/usr/include" ] ; then
+		    echo "$0: ignoring '$IN', see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=70129#c0"
+		else
+		    ARG+=("QMAKE_INCDIR+='$DIR'")
+		fi
+		;;
+
+	'CFLAGS='*)
+		ARG+=("QMAKE_CFLAGS+='${IN##CFLAGS=}'")
+		;;
+
+	'CXXFLAGS='*)
+		ARG+=("QMAKE_CXXFLAGS+='${IN##CXXFLAGS=}'")
+		;;
+
+	'no-ioctl')
+		ARG+=("DEFINES+='NO_IOCTL'")
+		;;
+
+	'no-amdgpu-ioctl')
+		ARG+=("DEFINES+='NO_AMDGPU_IOCTL'")
+		;;
+
+	'LDFLAGS='*)
+		ARG+=("QMAKE_LFLAGS+='${IN##LDFLAGS=}'")
+		;;
+
+	'QMAKE_STRIP='*)
+		;&
+	*'.pro')
+		;&
+	'-W'*)
+		;&
+	'-d')
+		ARG+=("$IN")
+		;;
+
+	'--help')
+		;&
+	'help')
+		;&
+	'-h')
+		echo "Create the Makefile for the execution of 'make'. Usage:"
+		echo "$0 [options] [project_file.pro]"
+		echo "Possible options:"
+		echo "	Compilation/linking flags:"
+		echo "	    CFLAGS=..."
+		echo "	    CXXFLAGS=..."
+		echo "	    LDFLAGS=..."
+		echo "	    QMAKE_STRIP=..."
+		echo "	Directories:"
+		echo "	    --prefix=..."
+		echo "	    --libdir=..."
+		echo "	    --includedir=..."
+		echo "The prefix will be used by 'make install' to install files in \$INSTALL_ROOT/\$DESTDIR/\$PREFIX/"
+		exit
+		;;
+
+	*)
+		echo "$0: ignoring '$IN'"
+		;;
+	esac
+done
+
+
+##### EXECUTE #####
+echo "Executing: $COMMAND ${ARG[@]}"
+("$COMMAND" "${ARG[@]}")
