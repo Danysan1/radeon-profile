@@ -787,7 +787,7 @@ int dXorg::getCurrentPowerPlayTableId(const QString &file) {
         QStringList sl = QString(f.readAll()).split("\n");
 
         for (int i = 0; i < sl.count(); ++i) {
-            if (sl[i][sl[i].length() - 1] == "*")
+            if (sl[i][sl[i].length() - 1] == '*')
                 return i;
         }
     }
