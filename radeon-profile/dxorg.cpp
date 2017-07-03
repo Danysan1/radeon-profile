@@ -791,4 +791,6 @@ int dXorg::getCurrentPowerPlayTableId(const QString &file) {
                 return i;
         }
     }
+
+    return 0;
 }
