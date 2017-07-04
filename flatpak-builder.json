@@ -19,7 +19,6 @@
 		{
 			"name": "radeon-profile",
 			"subdir": "radeon-profile",
-			"config-opts": [ "no-ioctl" ],
 			"sources": [
 				{
 					"type": "git",
